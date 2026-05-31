@@ -1,10 +1,13 @@
 # MalStat
 
- __  __       _ ____  _        _   
-|  \/  | __ _| / ___|| |_ __ _| |_ 
-| |\/| |/ _` | \___ \| __/ _` | __|
-| |  | | (_| | |___) | || (_| | |_ 
-|_|  |_|\__,_|_|____/ \__\__,_|\__|
+ ___      ___       __      ___        ________  ___________   __  ___________  
+|"  \    /"  |     /""\    |"  |      /"       )("     _   ") /""\("     _   ") 
+ \   \  //   |    /    \   ||  |     (:   \___/  )__/  \\__/ /    \)__/  \\__/  
+ /\\  \/.    |   /' /\  \  |:  |      \___  \       \\_ /   /' /\  \  \\_ /     
+|: \.        |  //  __'  \  \  |___    __/  \\      |.  |  //  __'  \ |.  |     
+|.  \    /:  | /   /  \\  \( \_|:  \  /" \   :)     \:  | /   /  \\  \\:  |     
+|___|\__/|___|(___/    \___)\_______)(_______/       \__|(___/    \___)\__|     
+                                                                                
 
 MalStat is a static PE malware triage toolkit for Windows executables. It extracts structural features from EXE, DLL, and SYS files, applies a calibrated machine learning classifier, and produces explainable JSON and HTML reports without executing the sample.
 
