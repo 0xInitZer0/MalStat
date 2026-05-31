@@ -36,7 +36,7 @@ jobs:
                "ENV/*"
 
       - name: Publish release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: malstat-${{ github.ref_name }}-source.zip
           generate_release_notes: true
