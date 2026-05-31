@@ -1,0 +1,748 @@
+# configs/verdict_rules.yaml
+#
+# Evaluation rules for every feature shown in the HTML/PDF report.
+# VerdictEngine reads this file and assigns a status to each feature.
+#
+# Rule types:
+#   type: boolean   - expected true/false; a deviation triggers the rule
+#   type: threshold - threshold(s) for a numeric feature
+#   type: range     - normal min..max range
+#
+# Statuses: ok | warning | suspicious
+# severity: 0-10 (0 = neutral, 10 = critical indicator)
+# group: entry_point | sections | imports | strings | resources | header | file_general | other
+#
+# If a feature is not described here, VerdictEngine emits it with status ok
+# and the explanation "No rule is defined; the feature is shown without evaluation."
+
+feature_rules:
+
+  # ===========================================================================
+  # GROUP: file_general - general file characteristics
+  # ===========================================================================
+
+  file_size:
+    type: range
+    ok_min: 1024
+    ok_max: 104857600   # 100 MB
+    severity_warning: 3
+    explanation_ok: 'File size is within the normal range.'
+    explanation_warning: 'Unusual file size (< 1 KB or > 100 MB).'
+    group: file_general
+
+  file_entropy:
+    type: threshold
+    suspicious_above: 7.0
+    warning_above: 6.5
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'High entropy across the whole file; it is likely compressed or encrypted by a packer.'
+    explanation_warning: 'Moderately high file entropy. Partial compression is possible.'
+    explanation_ok: 'File entropy is within the normal range.'
+    group: file_general
+
+  is_executable_image:
+    type: info
+    expected: "descriptor"
+    explanation_true: 'The raw PE flag IMAGE_FILE_EXECUTABLE_IMAGE is set. This is a header fact, not a standalone IOC.'
+    explanation_false: 'The raw PE flag IMAGE_FILE_EXECUTABLE_IMAGE is not set.'
+    group: file_general
+
+  is_exe:
+    type: info
+    expected: "descriptor"
+    explanation_true: 'The file is classified as a standalone EXE by its PE header.'
+    explanation_false: 'The file is not classified as a standalone EXE.'
+    group: file_general
+
+  is_dll:
+    type: info
+    expected: "descriptor"
+    explanation_true: 'The file is classified as a DLL-like PE. DLL type alone is not treated as an IOC.'
+    explanation_false: 'The file is not classified as a DLL-like PE.'
+    group: file_general
+
+  is_driver:
+    type: info
+    expected: "descriptor"
+    explanation_true: 'The file is classified as a driver-like or native PE. Some EXE-oriented rules do not apply to this kind of PE.'
+    explanation_false: 'The file is not classified as a driver-like or native PE.'
+    group: file_general
+
+  # ===========================================================================
+  # GROUP: header - PE header fields
+  # ===========================================================================
+
+  num_sections:
+    type: range
+    ok_min: 1
+    ok_max: 12
+    severity_warning: 3
+    explanation_ok: 'Section count is within the normal range.'
+    explanation_warning: 'Unusual section count. Fewer than 1 is impossible, and more than 12 is atypical.'
+    group: header
+
+  has_signature:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 5
+    explanation: 'No digital signature is present (DataDirectory[SECURITY] is empty). Legitimate distributables are almost always signed.'
+    explanation_ok: 'The file has a digital signature.'
+    group: header
+
+  checksum_is_zero:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'The CheckSum field in the Optional Header is zero. Properly built PE files usually populate the checksum.'
+    explanation_ok: 'CheckSum is not zero.'
+    group: header
+
+  checksum_is_valid:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 5
+    explanation: 'CheckSum does not match the computed value. The file may have been modified after the build.'
+    explanation_ok: 'CheckSum is valid and matches the computed value.'
+    group: header
+
+  timestamp_is_zero:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 3
+    explanation: 'Build timestamp is 0, which is atypical for legitimate compilers.'
+    explanation_ok: 'A build timestamp is present.'
+    group: header
+
+  timestamp_is_future:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'Build timestamp points into the future. This can indicate tampering or bad metadata.'
+    explanation_ok: 'Build timestamp is within an acceptable range.'
+    group: header
+
+  has_aslr:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'ASLR flag (IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) is missing. This reduces exploit resistance.'
+    explanation_ok: 'ASLR is enabled (DYNAMIC_BASE).'
+    group: header
+
+  has_dep:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'DEP/NX flag (IMAGE_DLLCHARACTERISTICS_NX_COMPAT) is missing. This reduces protection against shellcode.'
+    explanation_ok: 'DEP/NX is enabled (NX_COMPAT).'
+    group: header
+
+  has_cfg:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 2
+    explanation: 'CFG (Control Flow Guard) is missing. It is recommended for modern legitimate software.'
+    explanation_ok: 'CFG is enabled.'
+    group: header
+
+  has_rich_header:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 3
+    explanation: 'Rich Header is missing. Legitimate PE files built with Visual Studio almost always contain a Rich Header.'
+    explanation_ok: 'Rich Header is present.'
+    group: header
+
+  rich_header_is_zeroed:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'Rich Header was detected, but its contents are zeroed. It may have been intentionally scrubbed to hide compiler traces.'
+    explanation_ok: 'Rich Header is not zeroed.'
+    group: header
+
+  imagebase_is_nonstandard:
+    type: boolean
+    expected_value: false
+    apply_if:
+      is_driver: false
+    status_if_triggered: warning
+    severity: 3
+    explanation: 'ImageBase uses a nonstandard value. Typical user-mode PE files use 0x400000 for EXE and 0x10000000 for DLL.'
+    explanation_ok: 'ImageBase is standard.'
+    explanation_not_applicable: 'The standard ImageBase check is skipped for driver-like PE files because .sys images often differ from EXE and DLL patterns.'
+    group: header
+
+  has_tls:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 4
+    explanation: 'A TLS entry (Thread Local Storage) was detected. TLS callbacks run before the entry point and are used for anti-debugging and shellcode initialization.'
+    explanation_ok: 'No TLS entries are present.'
+    group: header
+
+  dos_stub_nonstandard:
+    type: boolean
+    expected_value: false
+    status_if_triggered: warning
+    severity: 2
+    explanation: 'DOS stub is nonstandard. Legitimate PE files usually contain the standard text This program cannot be run in DOS mode.'
+    explanation_ok: 'DOS stub is standard.'
+    group: header
+
+  # ===========================================================================
+  # GROUP: entry_point - entry-point anomalies
+  # ===========================================================================
+
+  ep_starts_with_pushad:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 9
+    explanation: 'The first byte at the entry point is 0x60 (PUSHAD). This is a classic packer marker: registers are saved before the decryptor stub. Seen in UPX, FSG, MPRESS, and other packers.'
+    explanation_ok: 'The first EP byte is not PUSHAD.'
+    group: entry_point
+
+  ep_is_in_last_section:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 8
+    explanation: 'The entry point is in the last section of the file. Legitimate code usually lives in .text, the first or second section. This is typical of UPX, ASPack, and other runtime packers.'
+    explanation_ok: 'The EP is in a standard section, not the last one.'
+    group: entry_point
+
+  ep_outside_sections:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 10
+    explanation: 'The entry point points outside all sections. This is a critical anomaly because a valid PE file always places the EP inside one of its sections.'
+    explanation_ok: 'The EP is inside one of the file sections.'
+    group: entry_point
+
+  ep_section_is_writable:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 8
+    explanation: 'The section containing the entry point has WRITE (MEM_WRITE) enabled. Executable code should not live in a writable section.'
+    explanation_ok: 'The EP section is read/execute only and not writable.'
+    group: entry_point
+
+  ep_first64_entropy:
+    type: threshold
+    suspicious_above: 7.0
+    warning_above: 6.0
+    severity_suspicious: 7
+    severity_warning: 4
+    explanation_suspicious: 'The first 64 bytes at the entry point have high entropy. This is likely an encrypted or compressed decryptor stub.'
+    explanation_warning: 'The first EP bytes have moderately high entropy.'
+    explanation_ok: 'Entropy of the first EP bytes is within the normal range.'
+    group: entry_point
+
+  ep_section_virt_raw_ratio:
+    type: threshold
+    suspicious_above: 10.0
+    warning_above: 5.0
+    severity_suspicious: 7
+    severity_warning: 4
+    explanation_suspicious: 'The virtual/raw size ratio of the EP section is greater than 10. The section occupies far more memory than on-disk data, a classic sign of a runtime packer such as UPX.'
+    explanation_warning: 'The EP section has an elevated virtual/raw ratio.'
+    explanation_ok: 'The virtual/raw ratio is within the normal range.'
+    group: entry_point
+
+  # ===========================================================================
+  # GROUP: sections - section-level signals
+  # ===========================================================================
+
+  has_packer_section:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 9
+    explanation: 'A section name typical of a packer was detected (UPX0/1/2, .MPRESS1/2, .aspack, .vmp*, .themida, .enigma1/2, .obsidium, and others).'
+    explanation_ok: 'No packer-style section names were detected.'
+    group: sections
+
+  has_missing_text_section:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 7
+    explanation: 'The .text section is missing. Standard compilers such as MSVC, GCC, and Delphi always create .text for executable code. Its absence points to a packed or unusually built file.'
+    explanation_ok: 'The .text section is present.'
+    group: sections
+
+  sec_wx_count:
+    type: threshold
+    suspicious_above: 0
+    severity_suspicious: 8
+    explanation_suspicious: 'Sections with both WRITE and EXECUTE flags (W+X) were detected. Legitimate code usually separates data and code. This is typical of shellcode injectors and dynamically generated code.'
+    explanation_ok: 'No W+X sections were found.'
+    group: sections
+
+  sec_entropy_max:
+    type: threshold
+    suspicious_above: 7.5
+    warning_above: 7.0
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'Maximum section entropy is greater than 7.5 bits per byte. The section is nearly random, which strongly suggests encryption or compression.'
+    explanation_warning: 'Maximum section entropy is elevated.'
+    explanation_ok: 'Maximum section entropy is within the normal range.'
+    group: sections
+
+  sec_entropy_mean:
+    type: threshold
+    suspicious_above: 7.0
+    warning_above: 6.5
+    severity_suspicious: 6
+    severity_warning: 3
+    explanation_suspicious: 'Average entropy across all sections is high, which means most sections are compressed or encrypted.'
+    explanation_warning: 'Average section entropy is elevated.'
+    explanation_ok: 'Average section entropy is within the normal range.'
+    group: sections
+
+  num_sections:
+    type: range
+    ok_min: 1
+    ok_max: 12
+    severity_warning: 3
+    explanation_ok: 'Section count is within the normal range.'
+    explanation_warning: 'Unusual section count.'
+    group: sections
+
+  sec_virt_raw_ratio_max:
+    type: threshold
+    suspicious_above: 10.0
+    warning_above: 5.0
+    severity_suspicious: 7
+    severity_warning: 4
+    explanation_suspicious: 'Maximum virtual/raw ratio is greater than 10. One of the sections occupies far more memory than on-disk data.'
+    explanation_warning: 'One of the sections has an elevated virtual/raw ratio.'
+    explanation_ok: 'Virtual/raw ratios are within the normal range.'
+    group: sections
+
+  # ===========================================================================
+  # GROUP: imports - import-based signals
+  # ===========================================================================
+
+  api_injection_count:
+    type: threshold
+    suspicious_above: 2
+    warning_above: 1
+    severity_suspicious: 9
+    severity_warning: 5
+    explanation_suspicious: 'Multiple process injection APIs were detected (VirtualAllocEx, WriteProcessMemory, CreateRemoteThread, and others). This is a strong injector signal.'
+    explanation_warning: 'One process injection API was detected.'
+    explanation_ok: 'No process injection APIs were detected.'
+    group: imports
+
+  api_network_count:
+    type: threshold
+    suspicious_above: 3
+    warning_above: 1
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'Multiple networking APIs were detected (WSAStartup, connect, send/recv, HttpSendRequest, and others). Network activity or C2 traffic is possible.'
+    explanation_warning: 'Networking APIs were detected.'
+    explanation_ok: 'No suspicious networking APIs were detected.'
+    group: imports
+
+  api_antidebug_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'APIs used to resist debugging were detected (IsDebuggerPresent, CheckRemoteDebuggerPresent, NtQueryInformationProcess, and others).'
+    explanation_warning: 'One anti-debug API was detected.'
+    explanation_ok: 'No anti-debug APIs were detected.'
+    group: imports
+
+  api_privilege_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'Privilege-escalation APIs were detected (AdjustTokenPrivileges, ImpersonateLoggedOnUser, and others).'
+    explanation_ok: 'No privilege-escalation APIs were detected.'
+    group: imports
+
+  api_crypto_count:
+    type: threshold
+    suspicious_above: 2
+    warning_above: 1
+    severity_suspicious: 6
+    severity_warning: 2
+    explanation_suspicious: 'Multiple cryptographic APIs were detected (CryptAcquireContext, CryptEncrypt, and others). Data or payload encryption is possible.'
+    explanation_warning: 'One cryptographic API was detected.'
+    explanation_ok: 'No cryptographic APIs were detected, or only a minimal set.'
+    group: imports
+
+  api_loading_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'Dynamic code-loading APIs were detected (LoadLibraryA/W, GetProcAddress). They are often used to hide the real import surface.'
+    explanation_ok: 'No dynamic loading APIs were detected.'
+    group: imports
+
+  api_execution_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'APIs used to launch processes or execute code were detected (CreateProcess, WinExec, ShellExecute, and others).'
+    explanation_ok: 'No process-launch APIs were detected, or only a minimal set.'
+    group: imports
+
+  imports_by_ordinal_count:
+    type: threshold
+    suspicious_above: 5
+    warning_above: 1
+    severity_suspicious: 6
+    severity_warning: 2
+    explanation_suspicious: 'Multiple ordinal imports without names were detected. This is used to hide real calls from static analysis.'
+    explanation_warning: 'An ordinal import was detected.'
+    explanation_ok: 'There are no ordinal imports.'
+    group: imports
+
+  ratio_ordinal_imports:
+    type: threshold
+    suspicious_above: 0.3
+    warning_above: 0.1
+    severity_suspicious: 6
+    severity_warning: 3
+    explanation_suspicious: 'More than 30% of imports are ordinal-only. Intentional API hiding is possible.'
+    explanation_warning: 'The share of ordinal imports is elevated.'
+    explanation_ok: 'The ordinal import ratio is within the normal range.'
+    group: imports
+
+  imports_dll_count:
+    type: range
+    ok_min: 1
+    ok_max: 30
+    severity_warning: 3
+    explanation_ok: 'The number of imported DLLs is within the normal range.'
+    explanation_warning: 'Unusual DLL count: too few, which can indicate packing, or too many.'
+    group: imports
+
+  # ===========================================================================
+  # GROUP: strings - string-based signals
+  # ===========================================================================
+
+  strings_url_count:
+    type: threshold
+    suspicious_above: 2
+    warning_above: 0
+    severity_suspicious: 6
+    severity_warning: 2
+    explanation_suspicious: 'Multiple URLs (http://, https://) were detected. These may be C2 addresses or payload download locations.'
+    explanation_warning: 'A URL was detected.'
+    explanation_ok: 'No URLs were detected.'
+    group: strings
+
+  strings_ip_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'IP addresses were detected. These may be hardcoded C2 hosts.'
+    explanation_warning: 'An IP address was detected.'
+    explanation_ok: 'No obvious IP addresses were detected.'
+    group: strings
+
+  strings_crypto_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 5
+    severity_warning: 2
+    explanation_suspicious: 'Cryptocurrency-related strings were detected (bitcoin, wallet, mining, and others).'
+    explanation_ok: 'No cryptocurrency-related strings were detected.'
+    group: strings
+
+  strings_mz_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'Multiple MZ signatures were found inside the file. This may indicate an embedded PE payload such as a dropper or loader.'
+    explanation_warning: 'An additional MZ signature was detected.'
+    explanation_ok: 'No additional MZ signatures were detected.'
+    group: strings
+
+  strings_base64_count:
+    type: threshold
+    suspicious_above: 2
+    warning_above: 1
+    severity_suspicious: 5
+    severity_warning: 2
+    explanation_suspicious: 'Multiple long base64 strings were detected. This may indicate an encoded payload or configuration.'
+    explanation_warning: 'A base64 string was detected.'
+    explanation_ok: 'No base64 strings were detected.'
+    group: strings
+
+  strings_shell_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'Command-shell strings were detected (cmd.exe, powershell, /c, net user, and others).'
+    explanation_ok: 'No shell-related strings were detected.'
+    group: strings
+
+  floss_suspicious_count:
+    type: threshold
+    suspicious_above: 2
+    warning_above: 1
+    severity_suspicious: 8
+    severity_warning: 4
+    explanation_suspicious: 'FLOSS recovered obfuscated strings that match indicators such as APIs, URLs, and IPs.'
+    explanation_warning: 'FLOSS recovered one suspicious obfuscated string.'
+    explanation_ok: 'FLOSS did not recover suspicious obfuscated strings.'
+    group: strings
+
+  # ===========================================================================
+  # GROUP: resources - resource-section signals
+  # ===========================================================================
+
+  rsrc_has_embedded_pe:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 9
+    explanation: 'An MZ signature was detected in resources, which means an embedded PE file. This is a classic dropper or loader technique where the main file carries and drops a payload.'
+    explanation_ok: 'No embedded PE files were detected in resources.'
+    group: resources
+
+  rsrc_max_entropy:
+    type: threshold
+    suspicious_above: 7.5
+    warning_above: 7.0
+    severity_suspicious: 7
+    severity_warning: 3
+    explanation_suspicious: 'Maximum resource entropy is greater than 7.5. A resource is encrypted or compressed and may contain a payload.'
+    explanation_warning: 'One of the resources has elevated entropy.'
+    explanation_ok: 'Resource entropy is within the normal range.'
+    group: resources
+
+  rsrc_has_manifest:
+    type: boolean
+    expected_value: true
+    apply_if:
+      is_exe: true
+    status_if_triggered: warning
+    severity: 2
+    explanation: 'XML manifest (RT_MANIFEST) is missing. Most modern legitimate EXE files include a manifest.'
+    explanation_ok: 'XML manifest is present.'
+    explanation_not_applicable: 'The RT_MANIFEST check applies only to standalone EXE files; for DLL and driver-like PE files it is neutral.'
+    group: resources
+
+  rsrc_has_version_info:
+    type: boolean
+    expected_value: true
+    status_if_triggered: warning
+    severity: 3
+    explanation: 'RT_VERSION information is missing. Legitimate programs almost always include version information in resources.'
+    explanation_ok: 'Version information is present.'
+    group: resources
+
+  # ===========================================================================
+  # GROUP: opcodes - ASM opcode signals (30 features)
+  # Sources: Bilar (2007), Santos et al. (2010), Moskovitch et al. (2008)
+  # ===========================================================================
+
+  asm_invalid_ratio:
+    type: threshold
+    suspicious_above: 0.60
+    warning_above: 0.35
+    severity_suspicious: 8
+    severity_warning: 5
+    explanation_suspicious: 'More than 60% of code bytes could not be disassembled. The file is likely packed or encrypted.'
+    explanation_warning: '35-60% of bytes are invalid for disassembly. Partial packing is possible.'
+    explanation_ok: 'The code disassembles normally.'
+    group: opcodes
+
+  asm_coverage_ratio:
+    type: threshold
+    suspicious_below: 0.40
+    warning_below: 0.65
+    severity_suspicious: 7
+    severity_warning: 4
+    explanation_suspicious: 'Less than 40% of the .text section is covered by valid instructions, which is typical of packed PE files.'
+    explanation_warning: 'Disassembly coverage is below normal. Packing is possible.'
+    explanation_ok: 'Disassembly coverage is within the normal range.'
+    group: opcodes
+
+  asm_has_pushad_at_ep:
+    type: boolean
+    expected_value: false
+    status_if_triggered: suspicious
+    severity: 9
+    explanation: 'PUSHAD in the first 20 instructions at the entry point is a classic packer stub marker (UPX, MPRESS, ASPack, FSG).'
+    explanation_ok: 'No PUSHAD was detected at the entry point.'
+    group: opcodes
+
+  asm_pushad_popad_count:
+    type: threshold
+    suspicious_above: 1
+    warning_above: 0
+    severity_suspicious: 8
+    severity_warning: 6
+    explanation_suspicious: 'More than one PUSHAD is unusual even for packers and may indicate nested stubs.'
+    explanation_warning: 'PUSHAD was detected, which is a packer stub signal (PUSHAD -> ... -> POPAD -> JMP).'
+    explanation_ok: 'No PUSHAD was detected.'
+    group: opcodes
+
+  asm_opcode_entropy:
+    type: threshold
+    suspicious_below: 3.0
+    warning_below: 3.8
+    severity_suspicious: 5
+    severity_warning: 3
+    explanation_suspicious: 'Very low opcode diversity (entropy < 3.0) suggests a stub made of a few repeated instructions.'
+    explanation_warning: 'Reduced opcode diversity suggests a simple unpacking loop.'
+    explanation_ok: 'Opcode diversity is within the normal range.'
+    group: opcodes
+
+  asm_unique_opcodes:
+    type: threshold
+    suspicious_below: 15
+    warning_below: 25
+    severity_suspicious: 4
+    severity_warning: 3
+    explanation_suspicious: 'Fewer than 15 unique mnemonics suggest a repetitive packer stub.'
+    explanation_warning: 'Fewer than 25 unique mnemonics indicate a limited instruction set.'
+    explanation_ok: 'Mnemonic diversity is sufficient.'
+    group: opcodes
+
+  asm_ratio_xor:
+    type: threshold
+    suspicious_above: 0.05
+    warning_above: 0.03
+    severity_suspicious: 6
+    severity_warning: 4
+    explanation_suspicious: 'More than 5% of instructions are XOR. This is common in XOR-based encryption, RC4, or string deobfuscation.'
+    explanation_warning: 'The share of XOR instructions is elevated and may indicate data obfuscation.'
+    explanation_ok: 'XOR ratio is within the normal range.'
+    group: opcodes
+
+  asm_ratio_logic:
+    type: threshold
+    suspicious_above: 0.15
+    warning_above: 0.10
+    severity_suspicious: 4
+    severity_warning: 2
+    explanation_suspicious: 'More than 15% of instructions are logical operations. Heavy encryption or bitwise obfuscation is likely.'
+    explanation_warning: 'The share of logical operations is elevated.'
+    explanation_ok: 'Logical-operation share is within the normal range.'
+    group: opcodes
+
+  asm_ratio_nop:
+    type: threshold
+    suspicious_above: 0.10
+    warning_above: 0.05
+    severity_suspicious: 5
+    severity_warning: 3
+    explanation_suspicious: 'More than 10% of instructions are NOP, which suggests a NOP sled or junk insertion during obfuscation.'
+    explanation_warning: 'NOP instruction share is elevated.'
+    explanation_ok: 'NOP ratio is within the normal range.'
+    group: opcodes
+
+  asm_nop_sled_max_len:
+    type: threshold
+    suspicious_above: 15
+    warning_above: 8
+    severity_suspicious: 5
+    severity_warning: 3
+    explanation_suspicious: 'A NOP chain longer than 15 instructions was detected, which matches a shellcode pattern or junk insertion.'
+    explanation_warning: 'A NOP chain longer than 8 instructions was detected.'
+    explanation_ok: 'No long NOP chains were detected.'
+    group: opcodes
+
+  asm_ratio_int:
+    type: threshold
+    warning_above: 0.005
+    severity_warning: 4
+    explanation_warning: 'A noticeable share of INT, INT3, or SYSENTER instructions was detected. Anti-debug traps or manual syscalls are possible.'
+    explanation_ok: 'Interrupt instructions appear within normal limits.'
+    group: opcodes
+
+  asm_indirect_call_ratio:
+    type: threshold
+    suspicious_above: 0.30
+    warning_above: 0.15
+    severity_suspicious: 5
+    severity_warning: 3
+    explanation_suspicious: 'More than 30% of CALLs are indirect (CALL [reg/mem]), which is typical of dynamic API resolution by hash or reflective injection.'
+    explanation_warning: 'The share of indirect calls is elevated.'
+    explanation_ok: 'Indirect CALL ratio is within the normal range.'
+    group: opcodes
+
+  asm_ep_stub_entropy:
+    type: threshold
+    suspicious_below: 2.5
+    warning_below: 3.2
+    severity_suspicious: 6
+    severity_warning: 3
+    explanation_suspicious: 'Very low entropy in the first 30 instructions near the EP suggests a repetitive packer stub.'
+    explanation_warning: 'Reduced entropy at the start of the code may indicate a simple packer prologue.'
+    explanation_ok: 'Code diversity near the entry point is within the normal range.'
+    group: opcodes
+
+  asm_call_followed_by_pop:
+    type: threshold
+    warning_above: 0
+    severity_warning: 6
+    explanation_warning: 'CALL -> POP bigram (GetEIP trick) detected. This is a classic way to obtain EIP in shellcode and some malware loaders.'
+    explanation_ok: 'GetEIP pattern was not detected.'
+    group: opcodes
+
+  asm_loop_density:
+    type: threshold
+    warning_above: 0.01
+    severity_warning: 4
+    explanation_warning: 'A noticeable share of LOOP or LOOPNE instructions is atypical for compiled C++ and common in hand-written decryption loops.'
+    explanation_ok: 'LOOP instructions are absent or rare.'
+    group: opcodes
+
+  asm_top10_bigram_entropy:
+    type: threshold
+    suspicious_below: 2.0
+    warning_below: 2.8
+    severity_suspicious: 4
+    severity_warning: 2
+    explanation_suspicious: 'The top 10 opcode bigrams dominate with very low entropy, which means the code is built from a few repeating patterns such as a stub or loop.'
+    explanation_warning: 'Bigram entropy is reduced, which indicates repeated code patterns.'
+    explanation_ok: 'Bigram diversity is within the normal range.'
+    group: opcodes
+
+  asm_bigram_xor_xor:
+    type: threshold
+    warning_above: 5
+    severity_warning: 4
+    explanation_warning: 'More than 5 XOR -> XOR bigrams were detected, a pattern seen in RC4 key scheduling or XOR-based data encryption.'
+    explanation_ok: 'XOR -> XOR bigrams are within the normal range.'
+    group: opcodes

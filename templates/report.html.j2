@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PE Analysis Report — {{ report.filename }}</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-0: #090c10;
+      --bg-1: #11161c;
+      --bg-2: #171d25;
+      --panel-border: rgba(196, 206, 220, 0.12);
+      --text: #f3f5f7;
+      --text-soft: #dde3ea;
+      --muted: #97a1b1;
+      --muted-strong: #c2cad6;
+      --shadow: 0 18px 44px rgba(0,0,0,.24);
+      --radius-xl: 24px;
+      --radius-lg: 20px;
+      --radius-md: 16px;
+      --accent-benign: #49d39c;
+      --accent-suspicious: #ffbe55;
+      --accent-malicious: #ff6b81;
+      --accent-out: #8ea2ba;
+      --code-bg: rgba(255,255,255,.05);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Aptos", "Bahnschrift", "Segoe UI Variable Text", sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+      padding: 32px 20px 48px;
+      background: var(--bg-0);
+    }
+    body::before {
+      content: none;
+    }
+
+    h1, h2, h3 {
+      font-family: "Bahnschrift", "Aptos Display", "Segoe UI Variable Display", sans-serif;
+      letter-spacing: .02em;
+    }
+    h1 {
+      font-size: clamp(2rem, 3vw, 2.75rem);
+      line-height: 1.05;
+      margin: 0 0 10px;
+    }
+    h2 {
+      font-size: .98rem;
+      letter-spacing: .06em;
+      color: var(--muted-strong);
+      margin-bottom: 16px;
+    }
+    h3 {
+      font-size: .86rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    p { margin: 0; }
+    code {
+      font-family: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+      background: var(--code-bg);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 999px;
+      padding: .18rem .55rem;
+      color: var(--text-soft);
+    }
+
+    .page {
+      position: relative;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #10151b;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-xl);
+      padding: 26px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .report-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, .9fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+    .file-meta { min-width: 0; }
+    .report-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .76rem;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .report-kicker::before {
+      content: "";
+      width: 34px;
+      height: 1px;
+      background: var(--muted-strong);
+    }
+    .report-lede {
+      color: var(--text-soft);
+      max-width: 58ch;
+      margin-bottom: 10px;
+      font-size: .98rem;
+    }
+    .report-subtitle {
+      color: var(--muted);
+      max-width: 62ch;
+      margin-bottom: 22px;
+      font-size: .88rem;
+    }
+    .file-meta table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .file-meta td {
+      vertical-align: top;
+      padding: 0 12px 0 0;
+    }
+    .file-meta td:first-child {
+      width: 152px;
+      color: var(--muted);
+      font-size: .74rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      white-space: nowrap;
+    }
+    .file-meta td:last-child { color: var(--text-soft); }
+    .hash-code {
+      display: inline-block;
+      font-size: .77rem;
+      word-break: break-all;
+      border-radius: 10px;
+    }
+    .meta-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+    .meta-flag::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 6px rgba(255,255,255,.03);
+    }
+    .meta-flag--yes { color: var(--accent-benign); }
+    .meta-flag--yes::before { background: var(--accent-benign); }
+    .meta-flag--no { color: var(--accent-malicious); }
+    .meta-flag--no::before { background: var(--accent-malicious); }
+
+    .verdict-box {
+      position: relative;
+      min-width: 0;
+      padding: 26px;
+      border-radius: calc(var(--radius-xl) - 4px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      background: #0d1217;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .verdict-box::before {
+      content: none;
+    }
+    .verdict-box::after {
+      content: none;
+    }
+    .verdict-malicious {
+      --verdict-accent: var(--accent-malicious);
+      background: rgba(255,107,129,.08);
+      border-color: rgba(255,107,129,.35);
+    }
+    .verdict-suspicious {
+      --verdict-accent: var(--accent-suspicious);
+      background: rgba(255,190,85,.08);
+      border-color: rgba(255,190,85,.34);
+    }
+    .verdict-benign {
+      --verdict-accent: var(--accent-benign);
+      background: rgba(73,211,156,.08);
+      border-color: rgba(73,211,156,.32);
+    }
+    .verdict-out-of-scope {
+      --verdict-accent: var(--accent-out);
+      background: rgba(142,162,186,.08);
+      border-color: rgba(142,162,186,.28);
+    }
+    .verdict-caption {
+      position: relative;
+      z-index: 1;
+      font-size: .78rem;
+      letter-spacing: .1em;
+      color: var(--muted-strong);
+    }
+    .verdict-label {
+      position: relative;
+      z-index: 1;
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: var(--verdict-accent);
+    }
+    .verdict-prob {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(2.8rem, 5vw, 4.2rem);
+      line-height: .98;
+      font-weight: 800;
+      color: #fff;
+    }
+    .verdict-sub {
+      position: relative;
+      z-index: 1;
+      color: var(--muted-strong);
+      font-size: .85rem;
+    }
+    .verdict-note {
+      position: relative;
+      z-index: 1;
+      color: var(--text-soft);
+      font-size: .92rem;
+      max-width: 34ch;
+    }
+    .verdict-stats {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+      color: var(--text-soft);
+      font-size: .78rem;
+      font-weight: 650;
+    }
+    .stat-chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+    }
+    .stat-chip--suspicious::before {
+      background: var(--accent-malicious);
+      box-shadow: 0 0 14px rgba(255,107,129,.55);
+    }
+    .stat-chip--warning::before {
+      background: var(--accent-suspicious);
+      box-shadow: 0 0 14px rgba(255,190,85,.45);
+    }
+
+    .trigger-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+    .trigger-list li {
+      display: grid;
+      grid-template-columns: auto minmax(180px, 220px) auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .icon-suspicious::before,
+    .icon-warning::before,
+    .icon-ok::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-top: 6px;
+      border-radius: 999px;
+    }
+    .icon-suspicious::before {
+      background: var(--accent-malicious);
+      box-shadow: 0 0 0 7px rgba(255,107,129,.12);
+    }
+    .icon-warning::before {
+      background: var(--accent-suspicious);
+      box-shadow: 0 0 0 7px rgba(255,190,85,.12);
+    }
+    .icon-ok::before {
+      background: var(--accent-benign);
+      box-shadow: 0 0 0 7px rgba(73,211,156,.12);
+    }
+    .trigger-name {
+      font-weight: 700;
+      font-family: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+      font-size: .86rem;
+      color: #f7faff;
+    }
+    .trigger-value {
+      font-family: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+      font-size: .82rem;
+      color: var(--muted-strong);
+    }
+    .trigger-explain {
+      min-width: 0;
+      color: var(--text-soft);
+      font-size: .86rem;
+    }
+
+    .section-note {
+      color: var(--muted);
+      font-size: .88rem;
+      margin-bottom: 14px;
+    }
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    .table-scroll::-webkit-scrollbar { height: 10px; }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+    }
+    .feature-table {
+      width: 100%;
+      min-width: 880px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .feature-table th {
+      text-align: left;
+      padding: 12px;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      color: var(--muted-strong);
+      background: rgba(23,31,45,.96);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .feature-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      vertical-align: top;
+      font-size: .84rem;
+      color: var(--text-soft);
+    }
+    .feature-table tr:last-child td { border-bottom: none; }
+    .feature-table tbody tr:hover td { background: rgba(255,255,255,.035); }
+    .row-suspicious td { background: rgba(255,107,129,.08); }
+    .row-warning td { background: rgba(255,190,85,.07); }
+    .row-ok td { background: transparent; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 112px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+    .badge-suspicious {
+      background: rgba(255,107,129,.14);
+      color: #ffd7de;
+      border-color: rgba(255,107,129,.24);
+    }
+    .badge-warning {
+      background: rgba(255,190,85,.14);
+      color: #ffe0ad;
+      border-color: rgba(255,190,85,.22);
+    }
+    .badge-ok {
+      background: rgba(73,211,156,.12);
+      color: #cbffe9;
+      border-color: rgba(73,211,156,.22);
+    }
+    .val-cell {
+      font-family: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+      white-space: nowrap;
+    }
+    .val-empty { color: var(--muted); }
+    .bool-true {
+      color: var(--accent-malicious);
+      font-weight: 700;
+    }
+    .bool-false {
+      color: var(--accent-benign);
+      font-weight: 700;
+    }
+    .expectation-cell {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+    .severity-cell { text-align: center; }
+    .severity-muted { color: var(--muted); }
+    .severity-low { color: var(--muted-strong); }
+    .severity-medium {
+      color: var(--accent-suspicious);
+      font-weight: 600;
+    }
+    .severity-high {
+      color: var(--accent-malicious);
+      font-weight: 700;
+    }
+
+    details {
+      margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,.02);
+      overflow: hidden;
+    }
+    details[open] { box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
+    summary {
+      cursor: pointer;
+      padding: 15px 18px;
+      background: rgba(255,255,255,.03);
+      font-weight: 700;
+      font-size: .9rem;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "▸";
+      flex-shrink: 0;
+      font-size: .82rem;
+      color: var(--muted);
+      transition: transform .18s ease;
+    }
+    details[open] summary::after { transform: rotate(90deg); }
+    .group-heading {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .group-count {
+      font-size: .76rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .group-alert {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .group-alert--suspicious { color: var(--accent-malicious); }
+    .group-alert--warning { color: var(--accent-suspicious); }
+    .triggered-indicator {
+      font-size: .72rem;
+      color: var(--muted);
+    }
+
+    .shap-bar-container { display: flex; align-items: center; gap: 8px; }
+    .shap-bar {
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    .shap-pos { background: var(--accent-malicious); }
+    .shap-neg { background: var(--accent-benign); }
+
+    .footer {
+      text-align: center;
+      font-size: .76rem;
+      color: var(--muted);
+      margin-top: 18px;
+      padding-bottom: 8px;
+    }
+    .invalid-notice {
+      background: rgba(255,107,129,.08);
+      border: 1px solid rgba(255,107,129,.25);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      color: #ffd8de;
+      font-size: .95rem;
+      box-shadow: 0 12px 32px rgba(0,0,0,.22);
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 20px 14px 36px; }
+      .card {
+        padding: 20px;
+        border-radius: 22px;
+      }
+      .report-header { grid-template-columns: 1fr; }
+      .trigger-list li { grid-template-columns: auto 1fr; }
+      .trigger-value, .shap-bar-container { grid-column: 2; }
+      .file-meta td:first-child { width: 124px; }
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.7rem; }
+      .file-meta table,
+      .file-meta tbody,
+      .file-meta tr,
+      .file-meta td {
+        display: block;
+        width: 100%;
+      }
+      .file-meta tr { margin-bottom: 12px; }
+      .file-meta td:first-child {
+        width: 100%;
+        margin-bottom: 4px;
+      }
+      .verdict-stats { flex-direction: column; }
+      .trigger-list li { grid-template-columns: 1fr; }
+      .icon-suspicious, .icon-warning, .icon-ok { display: none; }
+      summary { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============================================================
+       CARD 1: SUMMARY
+       ============================================================ -->
+  <div class="card">
+    <div class="report-header">
+
+      <!-- File metadata -->
+      <div class="file-meta">
+        <div class="report-kicker">Static PE analysis</div>
+        <h1>{{ report.filename }}</h1>
+        <p class="report-lede">Brief file summary: the model result, what raised concern, and where to look deeper.</p>
+        <p class="report-subtitle">Below is the key PE metadata, the model's final assessment, and a full feature breakdown without unnecessary visual noise.</p>
+        <table>
+          <tr>
+            <td>File:</td>
+            <td><strong>{{ report.filename }}</strong></td>
+          </tr>
+          <tr>
+            <td>SHA-256:</td>
+            <td><code class="hash-code">{{ report.sha256 }}</code></td>
+          </tr>
+          <tr>
+            <td>Size:</td>
+            <td>{{ "{:,}".format(report.file_size) }} bytes</td>
+          </tr>
+          <tr>
+            <td>Valid PE:</td>
+            <td>
+              {% if report.is_pe_valid %}
+                <span class="meta-flag meta-flag--yes">Yes</span>
+              {% else %}
+                <span class="meta-flag meta-flag--no">No</span>
+                {% if report.pe_invalid_reason %}
+                  — {{ report.pe_invalid_reason }}
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td>Analysis date:</td>
+            <td>{{ report.analysis_timestamp }}</td>
+          </tr>
+          <tr>
+            <td>Model:</td>
+            <td>{{ report.model_name }} v{{ report.model_version }}</td>
+          </tr>
+          <tr>
+            <td>Verdict threshold:</td>
+            <td>{{ "%.0f"|format(report.verdict_threshold * 100) }}%</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Verdict box -->
+      <div class="verdict-box {{ report.verdict_css_class() }}">
+        <div class="verdict-caption">Model outcome</div>
+        <div class="verdict-label">{{ report.verdict_label() }}</div>
+        <div class="verdict-prob">{{ "%.1f"|format(report.probability * 100) }}%</div>
+        <div class="verdict-sub">estimated maliciousness probability</div>
+        <div class="verdict-note">
+          {% if report.verdict == "malicious" %}
+            The file profile is consistently similar to malware. This sample should be investigated as potentially dangerous.
+          {% elif report.verdict == "suspicious" %}
+            The profile shows notable deviations from a typical legitimate PE. Manual context review is needed here.
+          {% elif report.verdict == "benign" %}
+            Based on the current static features, the file looks closer to a legitimate PE and does not appear anomalous.
+          {% else %}
+            The file falls outside the PE-only model, so this result should not be treated as a full verdict.
+          {% endif %}
+        </div>
+        <div class="verdict-stats">
+          <span class="stat-chip stat-chip--suspicious">Strong signals: {{ report.suspicious_count() }}</span>
+          <span class="stat-chip stat-chip--warning">Soft signals: {{ report.warning_count() }}</span>
+        </div>
+      </div>
+
+    </div><!-- /.report-header -->
+  </div><!-- /.card -->
+
+  <!-- ============================================================
+       If PE is invalid — show notice and stop
+       ============================================================ -->
+  {% if not report.is_pe_valid %}
+  <div class="invalid-notice">
+    The file is not a valid PE. For the PE-only malicious classifier, this input is treated as out of scope.
+    {% if report.pe_invalid_reason %}<br>Reason: {{ report.pe_invalid_reason }}{% endif %}
+  </div>
+  {% else %}
+
+  <!-- ============================================================
+       CARD 2: TOP TRIGGERS
+       ============================================================ -->
+  {% if report.top_factors %}
+  <div class="card">
+    <h2>What influenced the result the most</h2>
+    <ul class="trigger-list">
+      {% for f in report.top_factors %}
+      <li>
+        <span class="icon-{{ f.status }}"></span>
+        <span class="trigger-name">{{ f.feature_name }}</span>
+        <span class="trigger-value">= {{ f.value }}</span>
+        {% if report.shap_values and f.feature_name in report.shap_values %}
+          {% set sv = report.shap_values[f.feature_name] %}
+          <span class="shap-bar-container" title="SHAP: {{ '%.3f'|format(sv) }}">
+            <span class="shap-bar {{ 'shap-pos' if sv > 0 else 'shap-neg' }}"
+                  style="width:{{ [([sv|abs * 60, 80]|min), 4]|max }}px;">
+            </span>
+            <span style="font-size:11px;color:#888;">{{ '%+.3f'|format(sv) }}</span>
+          </span>
+        {% endif %}
+        <span class="trigger-explain">{{ f.explanation }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- ============================================================
+       CARD 3: FULL FEATURE TABLE grouped by section
+       ============================================================ -->
+  <div class="card">
+    <h2>Detailed feature breakdown</h2>
+    <p class="section-note">
+      Below is the full breakdown of all {{ report.feature_verdicts|length }} features. Groups with anomalies are expanded by default.
+    </p>
+
+    {% set groups = report.verdicts_by_group() %}
+    {% set group_order = ["entry_point", "header", "sections", "imports", "strings", "resources", "file_general", "other"] %}
+
+    {% for gkey in group_order %}
+      {% if gkey in groups %}
+        {% set verdicts_in_group = groups[gkey] %}
+        {% set suspicious_in_group = verdicts_in_group | selectattr("status", "equalto", "suspicious") | list | length %}
+        {% set warning_in_group    = verdicts_in_group | selectattr("status", "equalto", "warning")    | list | length %}
+
+        <details {% if suspicious_in_group > 0 or warning_in_group > 0 %}open{% endif %}>
+          <summary>
+            <span class="group-heading">
+              {{ group_labels.get(gkey, gkey) }}
+              {% if suspicious_in_group > 0 %}
+                <span class="group-alert group-alert--suspicious">{{ suspicious_in_group }} suspicious</span>
+              {% endif %}
+              {% if warning_in_group > 0 %}
+                <span class="group-alert group-alert--warning">{{ warning_in_group }} warning</span>
+              {% endif %}
+            </span>
+            <span class="group-count">{{ verdicts_in_group|length }} features</span>
+          </summary>
+
+          <div class="table-scroll">
+          <table class="feature-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Value</th>
+                <th>Expectation</th>
+                <th>Status</th>
+                <th>Severity</th>
+                <th>Explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in verdicts_in_group %}
+              <tr class="row-{{ v.status }}">
+                <td><code>{{ v.feature_name }}</code>
+                  {% if v.triggered_indicator %}
+                    <br><span class="triggered-indicator">→ {{ v.triggered_indicator }}</span>
+                  {% endif %}
+                </td>
+                <td class="val-cell">
+                  {% if v.value is none %}
+                    <span class="val-empty">—</span>
+                  {% elif v.value is sameas true %}
+                    <span class="bool-true">True</span>
+                  {% elif v.value is sameas false %}
+                    <span class="bool-false">False</span>
+                  {% else %}
+                    {{ v.value }}
+                  {% endif %}
+                </td>
+                <td class="expectation-cell">{{ v.expected }}</td>
+                <td>
+                  <span class="status-badge badge-{{ v.status }}">
+                    {% if v.status == "suspicious" %}Suspicious
+                    {% elif v.status == "warning" %}Warning
+                    {% else %}Normal{% endif %}
+                  </span>
+                </td>
+                <td class="severity-cell">
+                  {% if v.severity > 0 %}
+                    <span class="{% if v.severity >= 8 %}severity-high{% elif v.severity >= 5 %}severity-medium{% else %}severity-low{% endif %}">
+                      {{ v.severity }}/10
+                    </span>
+                  {% else %}
+                    <span class="severity-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ v.explanation }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </details>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Groups not in group_order -->
+    {% for gkey, verdicts_in_group in groups.items() %}
+      {% if gkey not in group_order %}
+        <details>
+          <summary>
+            <span class="group-heading">{{ group_labels.get(gkey, gkey) }}</span>
+            <span class="group-count">{{ verdicts_in_group|length }} features</span>
+          </summary>
+          <div class="table-scroll">
+          <table class="feature-table">
+            <thead>
+              <tr>
+                <th>Feature</th><th>Value</th><th>Expectation</th>
+                <th>Status</th><th>Severity</th><th>Explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in verdicts_in_group %}
+              <tr class="row-{{ v.status }}">
+                <td><code>{{ v.feature_name }}</code></td>
+                <td class="val-cell">
+                  {% if v.value is none %}<span class="val-empty">—</span>
+                  {% elif v.value is sameas true %}<span class="bool-true">True</span>
+                  {% elif v.value is sameas false %}<span class="bool-false">False</span>
+                  {% else %}{{ v.value }}{% endif %}
+                </td>
+                <td class="expectation-cell">{{ v.expected }}</td>
+                <td><span class="status-badge badge-{{ v.status }}">
+                  {% if v.status == "suspicious" %}Suspicious
+                  {% elif v.status == "warning" %}Warning
+                  {% else %}Normal{% endif %}
+                </span></td>
+                <td class="severity-cell">
+                  {% if v.severity > 0 %}
+                    <span class="{% if v.severity >= 8 %}severity-high{% elif v.severity >= 5 %}severity-medium{% else %}severity-low{% endif %}">{{ v.severity }}/10</span>
+                  {% else %}<span class="severity-muted">—</span>{% endif %}
+                </td>
+                <td>{{ v.explanation }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </details>
+      {% endif %}
+    {% endfor %}
+
+  </div><!-- /.card full features -->
+
+  {% endif %}{# end if is_pe_valid #}
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <div class="footer">
+    Report generated: {{ report.analysis_timestamp }} &nbsp;|&nbsp;
+    PE Malware Classifier &nbsp;|&nbsp;
+    Model: {{ report.model_name }} v{{ report.model_version }}
+  </div>
+
+</div><!-- /.page -->
+</body>
+</html>

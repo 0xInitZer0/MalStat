@@ -1,0 +1,26 @@
+# DLL indicators
+# match_type: exact | prefix
+#
+# To add a new DLL, add a single entry. Case is normalized in the registry.
+
+suspicious_dlls:
+  - {name: ws2_32.dll,    match_type: exact,  label: network}
+  - {name: wininet.dll,   match_type: exact,  label: network}
+  - {name: winhttp.dll,   match_type: exact,  label: network}
+  - {name: urlmon.dll,    match_type: exact,  label: network}
+  - {name: advapi32.dll,  match_type: exact,  label: privilege}
+  - {name: crypt32.dll,   match_type: exact,  label: crypto}
+  - {name: bcrypt.dll,    match_type: exact,  label: crypto}
+  - {name: ncrypt.dll,    match_type: exact,  label: crypto}
+  - {name: secur32.dll,   match_type: exact,  label: credential}
+  - {name: shell32.dll,   match_type: exact,  label: execution}
+  - {name: ole32.dll,     match_type: exact,  label: com}
+  - {name: oleaut32.dll,  match_type: exact,  label: com}
+  - {name: user32.dll,    match_type: exact,  label: ui}
+  - {name: kernel32.dll,  match_type: exact,  label: system}
+  - {name: ntdll.dll,     match_type: exact,  label: system}
+  - {name: psapi.dll,     match_type: exact,  label: enumeration}
+  - {name: iphlpapi.dll,  match_type: exact,  label: network}
+  - {name: winspool.drv,  match_type: exact,  label: misc}
+  - {name: netapi32.dll,  match_type: exact,  label: network}
+  - {name: samlib.dll,    match_type: exact,  label: credential}

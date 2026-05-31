@@ -1,0 +1,274 @@
+# configs/indicators/opcodes.yaml
+#
+# Registry of opcode indicators for OpcodeExtractor and VerdictEngine.
+#
+# Sections:
+#   opcode_categories    - mapping of category names to capstone mnemonics
+#   suspicious_sequences - named sequence patterns used for flagging
+#   thresholds           - numeric thresholds for verdict_rules.yaml and OpcodeExtractor
+#
+# Mnemonics are lowercase because capstone returns lowercase values.
+
+# ===========================================================================
+# OPCODE CATEGORIES
+# Used by OpcodeExtractor._category_ratios()
+# ===========================================================================
+
+opcode_categories:
+
+  nop:
+    mnemonics: [nop]
+    description: "Padding instructions. A high share suggests a NOP sled (shellcode) or junk insertion (obfuscation)."
+
+  call:
+    mnemonics: [call, lcall]
+    description: "All CALL instructions, both direct and indirect. Indirect calls are analyzed separately via asm_indirect_call_ratio."
+
+  jmp_uncond:
+    mnemonics: [jmp, ljmp, jmpf]
+    description: "Unconditional jumps. A high share with few instructions often means trampolines or anti-disassembly tricks."
+
+  jmp_cond:
+    mnemonics:
+      - je
+      - jne
+      - jz
+      - jnz
+      - jg
+      - jge
+      - jl
+      - jle
+      - ja
+      - jae
+      - jb
+      - jbe
+      - js
+      - jns
+      - jc
+      - jnc
+      - jo
+      - jno
+      - jp
+      - jnp
+      - jpe
+      - jpo
+      - jcxz
+      - jecxz
+      - jrcxz
+    description: "Conditional jumps (Jcc). A moderate share is typical in both classes."
+
+  ret:
+    mnemonics: [ret, retn, retf, lret, iret, iretd, iretq]
+    description: "Return instructions. An extremely low share together with high asm_invalid_ratio suggests packed code."
+
+  push:
+    mnemonics: [push, pusha, pushad, pushf, pushfd, pushfq]
+    description: "All PUSH instructions, including PUSHAD. PUSHAD at the EP is a classic packer stub signal."
+
+  pop:
+    mnemonics: [pop, popa, popad, popf, popfd, popfq]
+    description: "All POP instructions, including POPAD. They mirror PUSH in packer stubs."
+
+  mov:
+    mnemonics:
+      - mov
+      - movsx
+      - movzx
+      - movs
+      - movsb
+      - movsw
+      - movsd
+      - movsq
+      - movabs
+      - movbe
+      - lea
+      - xchg
+    description: "Data-movement instructions. Usually the largest share in both classes."
+
+  arith:
+    mnemonics:
+      - add
+      - sub
+      - mul
+      - imul
+      - div
+      - idiv
+      - inc
+      - dec
+      - adc
+      - sbb
+      - neg
+      - cbw
+      - cwd
+      - cdq
+      - cqo
+    description: "Arithmetic instructions. A moderate share is normal."
+
+  logic:
+    mnemonics:
+      - and
+      - or
+      - not
+      - xor
+      - shl
+      - shr
+      - sar
+      - sal
+      - rol
+      - ror
+      - rcl
+      - rcr
+      - test
+      - bt
+      - bts
+      - btr
+      - btc
+      - bsf
+      - bsr
+    description: "Logical operations and bit shifts. A high share often indicates encryption or obfuscation."
+
+  xor:
+    mnemonics: [xor]
+    description: "XOR is a subset of logic. It is broken out separately because of strong predictive power (RC4, XOR cipher, string obfuscation)."
+
+  int_:
+    mnemonics: [int, int3, into, syscall, sysenter, sysexit]
+    description: "System interrupts. INT3 is often used as an anti-debug trap (an alternative to IsDebuggerPresent)."
+
+  loop:
+    mnemonics: [loop, loopne, loope, loopnz, loopz]
+    description: "Manual loop instructions. Rare in compiled C++; common in hand-written decryption loops (asm stubs)."
+
+  indirect_call:
+    mnemonics: []
+    description: >
+      Indirect CALLs are defined by the operand rather than the mnemonic in capstone detail mode.
+      OpcodeExtractor uses a heuristic: if the CALL operand refers to [reg] or [mem],
+      it is treated as an indirect call. In practice, the operand just needs to contain '['.
+      This is used only to compute asm_indirect_call_ratio.
+
+# ===========================================================================
+# SUSPICIOUS SEQUENCES (named patterns)
+# Used for additional flagging in OpcodeExtractor._packer_signals()
+# ===========================================================================
+
+suspicious_sequences:
+
+  packer_pushad_stub:
+    pattern: [pushad]
+    window: 20          # look within the first 20 instructions from the EP
+    description: "Classic packer stub: PUSHAD near the start of the EP region. Seen in UPX, MPRESS, ASPack, and FSG."
+    severity: 8
+    references:
+      - "Bilar (2007). Opcodes as predictor for malware."
+      - "Known as the 'pushad trick': the packer saves all registers and restores them after unpacking."
+
+  getEIP_trick:
+    pattern: [call, pop]
+    bigram: true
+    description: "CALL+POP: classic way to obtain EIP without exceptions. Common in shellcode and some malware loaders."
+    severity: 6
+    references:
+      - "Used in position-independent code (PIC shellcode), as well as in some droppers."
+
+  xor_loop:
+    pattern: [xor, xor]
+    bigram: true
+    description: "XOR->XOR bigram: common pattern in key scheduling (RC4 KSA) and XOR payload decryption."
+    severity: 5
+
+  nop_sled:
+    min_consecutive_nop: 8
+    description: "Continuous NOP sequence of length >= 8. Used as padding before shellcode or as junk in metamorphic code."
+    severity: 5
+
+  int3_sequence:
+    pattern: [int3, int3]
+    bigram: true
+    description: "Consecutive INT3 instructions. This can be an intentional debugger trap."
+    severity: 4
+
+# ===========================================================================
+# THRESHOLD VALUES
+# Used in verdict_rules.yaml (the opcodes section) and in OpcodeExtractor
+# ===========================================================================
+
+thresholds:
+  # Packing / obfuscation signals
+  asm_invalid_ratio:
+    suspicious_above: 0.60    # >60% invalid bytes is almost certainly packed
+    warning_above: 0.35       # 35-60% suggests possible packing
+
+  asm_coverage_ratio:
+    suspicious_below: 0.40    # <40% coverage suggests packed code
+    warning_below: 0.65       # 65-40% suggests partial packing
+
+  asm_opcode_entropy:
+    suspicious_below: 3.0     # very repetitive code suggests a stub
+    warning_below: 3.8
+
+  asm_unique_opcodes:
+    suspicious_below: 15      # fewer than 15 unique opcodes suggests a stub
+    warning_below: 25
+
+  # Encryption / XOR signals
+  asm_ratio_xor:
+    suspicious_above: 0.05    # >5% XOR is an obfuscation signal
+    warning_above: 0.03
+
+  asm_ratio_logic:
+    suspicious_above: 0.15    # >15% logical operations
+    warning_above: 0.10
+
+  # Atypical patterns
+  asm_ratio_nop:
+    suspicious_above: 0.10    # >10% NOP implies a NOP sled
+    warning_above: 0.05
+
+  asm_ratio_int:
+    warning_above: 0.005      # >0.5% INT often means anti-debug traps
+
+  asm_indirect_call_ratio:
+    suspicious_above: 0.30    # >30% indirect CALLs suggests dynamic dispatch
+    warning_above: 0.15
+
+  asm_nop_sled_max_len:
+    suspicious_above: 15      # more than 15 consecutive NOPs
+    warning_above: 8
+
+  asm_pushad_popad_count:
+    warning_above: 0          # any PUSHAD is a warning; suspicion depends on context
+    suspicious_above: 1       # more than one PUSHAD is a strong signal
+
+  # Entry-point region
+  asm_ep_stub_entropy:
+    suspicious_below: 2.5     # very low entropy in the first 30 instructions
+    warning_below: 3.2
+
+  # N-grams
+  asm_top10_bigram_entropy:
+    suspicious_below: 2.0     # top-10 bigrams are nearly identical, suggesting a stub
+    warning_below: 2.8
+
+# ===========================================================================
+# FEATURE PRIORITY FOR VerdictEngine
+# These severity values are used when building the report
+# ===========================================================================
+
+verdict_severity:
+  asm_has_pushad_at_ep:         9    # critical direct packer marker
+  asm_pushad_popad_count:       8
+  asm_invalid_ratio:            8    # packed code
+  asm_coverage_ratio:           7
+  asm_ratio_xor:                6
+  asm_ep_stub_entropy:          6
+  asm_indirect_call_ratio:      5
+  asm_call_followed_by_pop:     6
+  asm_opcode_entropy:           5
+  asm_nop_sled_max_len:         5
+  asm_ratio_nop:                4
+  asm_ratio_int:                4
+  asm_loop_density:             4
+  asm_unique_opcodes:           4
+  asm_bigram_xor_xor:           4
+  asm_top10_bigram_entropy:     4

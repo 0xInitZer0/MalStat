@@ -1,0 +1,40 @@
+{
+  "task_slug": "pe_only_malicious_classifier",
+  "problem_type": "binary_classification",
+  "scope": "valid_pe_only",
+  "classifier_input_contract": "Score only files that pass PE validation. Non-PE inputs are out of scope for this model.",
+  "positive_class": "malicious_pe",
+  "negative_class": "benign_pe",
+  "included_pe_kinds": [
+    "exe",
+    "dll",
+    "driver",
+    "other_pe"
+  ],
+  "excluded_inputs": [
+    "non_pe",
+    "label_confidence=low",
+    "unlabeled_rows"
+  ],
+  "filter_rules": {
+    "label_in": [
+      "0",
+      "1"
+    ],
+    "label_confidence_not_in": [
+      "low"
+    ],
+    "is_pe_valid_equals": "1",
+    "pe_kind_not_in": [
+      "non_pe"
+    ]
+  },
+  "non_pe_policy": {
+    "decision": "out_of_scope",
+    "future_extension": "dedicated_pre_classifier"
+  },
+  "recommended_training_profiles": [
+    "pure_static",
+    "augmented_triage"
+  ]
+}

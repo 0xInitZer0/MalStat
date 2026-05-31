@@ -1,0 +1,28 @@
+{
+  "profile_slug": "pure_static",
+  "intended_use": "first_baseline",
+  "description": "Pure static PE-only training profile with VT-derived signals removed.",
+  "vt_features_included": false,
+  "dropped_feature_columns": [
+    "vt_found",
+    "vt_positives",
+    "vt_suspicious",
+    "vt_total",
+    "vt_detection_ratio",
+    "vt_reputation",
+    "vt_first_seen_days_ago",
+    "vt_times_submitted"
+  ],
+  "scrubbed_metadata_fields": [
+    "av_detection_count"
+  ],
+  "feature_count": 291,
+  "row_count": 1400,
+  "paths": {
+    "features_csv": "features/pure_static_features.csv",
+    "features_parquet": "features/pure_static_features.parquet",
+    "metadata_csv": "metadata/pure_static_metadata.csv",
+    "metadata_parquet": "metadata/pure_static_metadata.parquet",
+    "profile_definition_json": "profile_definition.json"
+  }
+}

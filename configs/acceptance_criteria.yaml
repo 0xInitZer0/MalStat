@@ -1,0 +1,24 @@
+criteria:
+  - name: operating_constraints_satisfied
+    path: operating_point.constraints_satisfied
+    equals: true
+
+  - name: test_recall_min
+    path: splits.test.overall_metrics.recall
+    min_value: 0.85
+
+  - name: test_pr_auc_min
+    path: splits.test.overall_metrics.pr_auc
+    min_value: 0.90
+
+  - name: external_benign_fp_rate_max
+    path: splits.benign_dll_sys*.overall_metrics.false_positive_rate
+    aggregation: max
+    max_value: 0.02
+    skip_if_missing: true
+
+  - name: external_benign_fp_count_max
+    path: splits.benign_dll_sys*.overall_metrics.false_positive_count
+    aggregation: max
+    max_value: 0
+    skip_if_missing: true

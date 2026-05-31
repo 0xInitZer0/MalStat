@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Validate syntax tree
+        run: |
+          python -m compileall src scripts tests
+
+      - name: Run smoke tests
+        run: |
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Verify CLI entry points
+        run: |
+          python scripts/analyze_file.py --help
+          python scripts/analyze_directory.py --help
+          python scripts/build_dataset.py --help
+          python scripts/export_clean_training_subset.py --help
+          python scripts/train_model.py --help
+          python scripts/evaluate_model.py --help
+
+      - name: Verify Docker build
+        run: |
+          docker build --tag malstat:ci .

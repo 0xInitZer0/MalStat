@@ -1,0 +1,17 @@
+{
+  "profile_slug": "augmented_triage",
+  "intended_use": "operational_triage",
+  "description": "PE-only training profile that keeps VT-derived features for operational use.",
+  "vt_features_included": true,
+  "dropped_feature_columns": [],
+  "scrubbed_metadata_fields": [],
+  "feature_count": 299,
+  "row_count": 1400,
+  "paths": {
+    "features_csv": "features/augmented_triage_features.csv",
+    "features_parquet": "features/augmented_triage_features.parquet",
+    "metadata_csv": "metadata/augmented_triage_metadata.csv",
+    "metadata_parquet": "metadata/augmented_triage_metadata.parquet",
+    "profile_definition_json": "profile_definition.json"
+  }
+}

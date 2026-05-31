@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify tag matches VERSION
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          FILE_VERSION="$(tr -d '\r\n' < VERSION)"
+          test "$TAG_VERSION" = "$FILE_VERSION"
+
+      - name: Create source archive
+        run: |
+          ARCHIVE="malstat-${GITHUB_REF_NAME}-source.zip"
+          zip -r "$ARCHIVE" . \
+            -x ".git/*" \
+               ".github/workflows/release.yml" \
+               "__pycache__/*" \
+               "*.pyc" \
+               ".venv/*" \
+               "venv/*" \
+               "env/*" \
+               "ENV/*"
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: malstat-${{ github.ref_name }}-source.zip
+          generate_release_notes: true

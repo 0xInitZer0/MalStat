@@ -1,0 +1,26 @@
+selection:
+  metric: f1
+  tie_breakers:
+    - precision
+    - recall
+    - proximity_to_0_5
+  fallback: minimum_constraint_violation_then_max_f1
+
+suspicious_band:
+  mode: operating_margin
+  margin: 0.02
+  minimum_threshold: 0.5
+
+constraints:
+  - name: benign_dll_fp_guardrail
+    filters:
+      label: 0
+      pe_kind: dll
+    max_false_positive_rate: 0.02
+    max_false_positive_count: 2
+
+  - name: benign_driver_fp_guardrail
+    filters:
+      label: 0
+      pe_kind: driver
+    max_false_positive_count: 0

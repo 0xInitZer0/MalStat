@@ -1,0 +1,50 @@
+{
+  "recommended_default_profile": "pure_static",
+  "profiles": {
+    "pure_static": {
+      "profile_slug": "pure_static",
+      "intended_use": "first_baseline",
+      "description": "Pure static PE-only training profile with VT-derived signals removed.",
+      "vt_features_included": false,
+      "dropped_feature_columns": [
+        "vt_found",
+        "vt_positives",
+        "vt_suspicious",
+        "vt_total",
+        "vt_detection_ratio",
+        "vt_reputation",
+        "vt_first_seen_days_ago",
+        "vt_times_submitted"
+      ],
+      "scrubbed_metadata_fields": [
+        "av_detection_count"
+      ],
+      "feature_count": 291,
+      "row_count": 1400,
+      "paths": {
+        "features_csv": "profiles/pure_static/features/pure_static_features.csv",
+        "features_parquet": "profiles/pure_static/features/pure_static_features.parquet",
+        "metadata_csv": "profiles/pure_static/metadata/pure_static_metadata.csv",
+        "metadata_parquet": "profiles/pure_static/metadata/pure_static_metadata.parquet",
+        "profile_definition_json": "profiles/pure_static/profile_definition.json"
+      }
+    },
+    "augmented_triage": {
+      "profile_slug": "augmented_triage",
+      "intended_use": "operational_triage",
+      "description": "PE-only training profile that keeps VT-derived features for operational use.",
+      "vt_features_included": true,
+      "dropped_feature_columns": [],
+      "scrubbed_metadata_fields": [],
+      "feature_count": 299,
+      "row_count": 1400,
+      "paths": {
+        "features_csv": "profiles/augmented_triage/features/augmented_triage_features.csv",
+        "features_parquet": "profiles/augmented_triage/features/augmented_triage_features.parquet",
+        "metadata_csv": "profiles/augmented_triage/metadata/augmented_triage_metadata.csv",
+        "metadata_parquet": "profiles/augmented_triage/metadata/augmented_triage_metadata.parquet",
+        "profile_definition_json": "profiles/augmented_triage/profile_definition.json"
+      }
+    }
+  }
+}

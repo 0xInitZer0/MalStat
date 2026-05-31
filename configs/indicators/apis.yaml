@@ -1,0 +1,135 @@
+# API indicators with categories and match types
+# match_type: exact | prefix | regex
+#
+# To add a new indicator, add one entry in the appropriate category.
+# No extractor code changes are required.
+
+categories:
+
+  network:
+    - {name: accept,               match_type: exact}
+    - {name: bind,                 match_type: exact}
+    - {name: connect,              match_type: exact}
+    - {name: recv,                 match_type: exact}
+    - {name: send,                 match_type: exact}
+    - {name: gethostbyname,        match_type: exact}
+    - {name: gethostname,          match_type: exact}
+    - {name: inet_addr,            match_type: exact}
+    - {name: InternetOpen,         match_type: exact}
+    - {name: InternetOpenUrl,      match_type: exact}
+    - {name: InternetReadFile,     match_type: exact}
+    - {name: InternetWriteFile,    match_type: exact}
+    - {name: FtpPutFile,           match_type: exact}
+    - {name: URLDownloadToFile,    match_type: prefix}
+    - {name: ConnectNamedPipe,     match_type: exact, count_in_category: false}
+    - {name: PeekNamedPipe,        match_type: exact, count_in_category: false}
+    - {name: WSAStartup,           match_type: exact}
+
+  injection:
+    - {name: CreateRemoteThread,           match_type: exact}
+    - {name: OpenProcess,                  match_type: exact}
+    - {name: ReadProcessMemory,            match_type: exact}
+    - {name: WriteProcessMemory,           match_type: exact}
+    - {name: VirtualAllocEx,               match_type: exact}
+    - {name: VirtualProtectEx,             match_type: exact}
+    - {name: QueueUserAPC,                 match_type: exact}
+    - {name: GetThreadContext,             match_type: exact}
+    - {name: SetThreadContext,             match_type: exact}
+    - {name: ResumeThread,                 match_type: exact}
+    - {name: SuspendThread,                match_type: exact}
+    - {name: CreateFileMapping,            match_type: exact}
+    - {name: MapViewOfFile,                match_type: exact}
+    - {name: Toolhelp32ReadProcessMemory,  match_type: exact}
+    - {name: LdrLoadDll,                   match_type: exact}
+
+  enumeration:
+    - {name: CreateToolhelp32Snapshot, match_type: exact}
+    - {name: Process32First,           match_type: exact}
+    - {name: Process32Next,            match_type: exact}
+    - {name: Thread32First,            match_type: exact}
+    - {name: Thread32Next,             match_type: exact}
+    - {name: Module32First,            match_type: exact}
+    - {name: Module32Next,             match_type: exact}
+    - {name: EnumProcesses,            match_type: exact}
+    - {name: EnumProcessModules,       match_type: exact}
+    - {name: FindFirstFile,            match_type: exact}
+    - {name: FindNextFile,             match_type: exact}
+    - {name: NtQueryDirectoryFile,     match_type: exact}
+    - {name: GetAdaptersInfo,          match_type: exact}
+    - {name: NetShareEnum,             match_type: exact}
+
+  antidebug:
+    - {name: CheckRemoteDebuggerPresent,    match_type: exact}
+    - {name: IsDebuggerPresent,             match_type: exact}
+    - {name: OutputDebugString,             match_type: exact}
+    - {name: NtQueryInformationProcess,     match_type: exact}
+    - {name: NtSetInformationProcess,       match_type: exact}
+    - {name: QueryPerformanceCounter,       match_type: exact, count_in_category: false}
+    - {name: GetTickCount,                  match_type: exact, count_in_category: false}
+    - {name: GetVersionEx,                  match_type: exact, count_in_category: false}
+    - {name: IsWow64Process,                match_type: exact, count_in_category: false}
+    - {name: Wow64DisableWow64FsRedirection,match_type: exact, count_in_category: false}
+    - {name: GetStartupInfo,                match_type: exact, count_in_category: false}
+    - {name: GetSystemDefaultLangId,        match_type: exact, count_in_category: false}
+    - {name: GetWindowsDirectory,           match_type: exact, count_in_category: false}
+    - {name: GetTempPath,                   match_type: exact, count_in_category: false}
+    - {name: IsNTAdmin,                     match_type: exact}
+
+  privilege:
+    - {name: AdjustTokenPrivileges,      match_type: exact}
+    - {name: OpenSCManager,              match_type: exact}
+    - {name: CreateService,              match_type: exact}
+    - {name: ControlService,             match_type: exact}
+    - {name: StartServiceCtrlDispatcher, match_type: exact}
+    - {name: CreateMutex,                match_type: exact}
+    - {name: OpenMutex,                  match_type: exact}
+    - {name: LsaEnumerateLogonSessions,  match_type: exact}
+    - {name: SamIConnect,                match_type: exact}
+    - {name: SamIGetPrivateData,         match_type: exact}
+    - {name: SamQueryInformationUser,    match_type: exact}
+    - {name: NetScheduleJobAdd,          match_type: exact}
+
+  registry:
+    - {name: RegOpenKey,               match_type: prefix}
+    - {name: RtlCreateRegistryKey,     match_type: exact}
+    - {name: RtlWriteRegistryValue,    match_type: exact}
+
+  crypto:
+    - {name: CertOpenSystemStore,  match_type: prefix}
+    - {name: CryptAcquireContext,  match_type: prefix}
+
+  loading:
+    - {name: LoadLibrary,          match_type: prefix}
+    - {name: GetProcAddress,       match_type: exact}
+    - {name: GetModuleHandle,      match_type: exact}
+    - {name: GetModuleFileName,    match_type: exact}
+    - {name: MmGetSystemRoutineAddress, match_type: exact}
+    - {name: LoadResource,         match_type: exact}
+    - {name: FindResource,         match_type: exact}
+
+  hooking:
+    - {name: AttachThreadInput,    match_type: exact}
+    - {name: BitBlt,               match_type: exact}
+    - {name: CallNextHookEx,       match_type: exact}
+    - {name: FindWindow,           match_type: prefix}
+    - {name: GetAsyncKeyState,     match_type: exact}
+    - {name: GetKeyState,          match_type: exact}
+    - {name: GetDC,                match_type: exact}
+    - {name: GetForegroundWindow,  match_type: exact}
+    - {name: MapVirtualKey,        match_type: exact}
+    - {name: RegisterHotKey,       match_type: exact}
+    - {name: SetWindowsHookEx,     match_type: prefix}
+    - {name: WlxLoggedOnSAS,       match_type: exact}
+    - {name: Wlx,                  match_type: prefix}   # Wlx* covers all keylogger functions
+
+  execution:
+    - {name: CreateFile,                     match_type: prefix}
+    - {name: CreateProcess,                  match_type: prefix}
+    - {name: DeviceIoControl,                match_type: exact}
+    - {name: EnableExecuteProtectionSupport, match_type: exact}
+    - {name: ShellExecute,                   match_type: prefix}
+    - {name: SetFileTime,                    match_type: exact, count_in_category: false}
+    - {name: SfcTerminateWatcherThread,      match_type: exact}
+    - {name: system,                         match_type: exact}
+    - {name: WideCharToMultiByte,            match_type: exact, count_in_category: false}
+    - {name: WinExec,                        match_type: exact}

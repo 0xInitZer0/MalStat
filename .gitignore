@@ -1,0 +1,73 @@
+# Repository-level ignore rules for local data, generated artifacts, and private environment state.
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache and local environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment overrides
+.env
+.env.*
+!.env.example
+/.developer-update-checklist.md
+
+# Build and packaging outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Notebooks and local experiments
+.ipynb_checkpoints/
+docs/
+
+# Generated reports and analysis outputs
+reports/
+*.analysis.json
+*.analysis.html
+*.analysis.stdout.txt
+*.direct.html
+*.after_fix.json
+
+# Local datasets, exported training subsets, and evaluation inputs
+data/
+
+# Keep the directory available while excluding its contents by default
+!data/
+
+# Only the runtime model bundle is published
+models/**
+!models/
+!models/calibrated_model.pkl
+!models/preprocessor.pkl
+!models/feature_columns.json
+
+# Temporary model artifacts
+models/**/*.tmp
+models/**/*.bak

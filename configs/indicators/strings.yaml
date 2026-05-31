@@ -1,0 +1,48 @@
+# Regex patterns for string analysis
+# Used in strings_features.py
+# match_type: regex (every entry here is a regular expression)
+
+patterns:
+
+  url:
+    - {pattern: "https?://[\\w./\\-?=&%+#]+", label: url}
+
+  ip:
+    - {pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", label: ip}
+
+  domain:
+    - {pattern: "\\b(?:[a-z0-9\\-]+\\.)+(?:com|net|org|ru|io|xyz|top|club|tk|pw|cc|biz|info)\\b",
+       label: domain}
+
+  registry:
+    - {pattern: "HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER|HKCU|HKLM|HKEY_", label: registry}
+
+  crypto:
+    - {pattern: "AES|RSA|ChaCha|Salsa|RC4|DES|3DES|encrypt|decrypt|cipher|key|IV|nonce|hmac|sha256|sha512|md5",
+       label: crypto, flags: IGNORECASE}
+
+  shell:
+    - {pattern: "cmd\\.exe|powershell|rundll32|schtasks|wscript|cscript|mshta|regsvr32|certutil",
+       label: shell, flags: IGNORECASE}
+
+  base64:
+    - {pattern: "[A-Za-z0-9+/]{50,}={0,2}", label: base64_long}
+
+  hex_blob:
+    - {pattern: "\\b[0-9a-fA-F]{40,}\\b", label: hex_long}
+
+  mz_marker:
+    - {pattern: "MZ", label: mz_marker}
+
+  embedded_pe:
+    - {pattern: "This program cannot be run in DOS mode", label: embedded_pe_stub, flags: IGNORECASE}
+
+  mutex_pipe_service:
+    - {pattern: "\\\\\\.\\\\pipe\\\\|Global\\\\|Local\\\\", label: named_object}
+
+  file_path:
+    - {pattern: "[A-Za-z]:\\\\[\\w\\\\. \\-]+", label: file_path}
+
+  guid:
+    - {pattern: "\\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}",
+       label: guid}

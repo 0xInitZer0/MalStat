@@ -1,0 +1,18 @@
+{
+  "source_rows": 1525,
+  "kept_rows": 1400,
+  "excluded_rows": 125,
+  "excluded_low_confidence": 10,
+  "excluded_invalid_pe": 115,
+  "excluded_non_pe": 115,
+  "excluded_unlabeled": 0,
+  "label_distribution": {
+    "0": 693,
+    "1": 707
+  },
+  "pe_kind_distribution": {
+    "dll": 418,
+    "driver": 66,
+    "exe": 916
+  }
+}

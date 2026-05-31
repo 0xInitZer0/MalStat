@@ -1,0 +1,39 @@
+# PE file section heuristics
+# Used in section_features.py
+
+# Standard expected section names in legitimate PE files
+standard_section_names:
+  - .text
+  - .code
+  - CODE
+  - .data
+  - DATA
+  - .rdata
+  - .bss
+  - .rsrc
+  - .reloc
+  - .idata
+  - .edata
+  - .tls
+  - .debug
+  - .pdata
+  - .xdata
+  - .sxdata
+  - .gfids
+  - .00cfg
+  - .didat
+  - INIT        # drivers
+  - PAGE        # drivers
+  - .text$mn    # MSVC incremental linking
+
+# Section names that are empty or contain a null byte are suspicious
+empty_name_is_suspicious: true
+
+# Entropy thresholds in bits per byte
+entropy_thresholds:
+  high_suspicious: 7.0      # above this, compression or encryption is likely
+  very_high: 7.5
+  packed_file_overall: 6.8  # file-wide average
+
+# VirtualSize / SizeOfRawData ratio thresholds
+virt_raw_ratio_suspicious: 5.0   # VirtualSize > 5 * SizeOfRawData suggests in-memory unpacking

@@ -1,0 +1,58 @@
+# Packer and protector signatures
+# Three groups: section_names, ep_byte_markers, string_markers
+
+section_names:
+  # UPX
+  - {name: UPX0,        match_type: exact,  packer: UPX}
+  - {name: UPX1,        match_type: exact,  packer: UPX}
+  - {name: UPX2,        match_type: exact,  packer: UPX}
+  # MPRESS
+  - {name: .MPRESS1,    match_type: exact,  packer: MPRESS}
+  - {name: .MPRESS2,    match_type: exact,  packer: MPRESS}
+  # ASPack
+  - {name: .aspack,     match_type: exact,  packer: ASPack}
+  - {name: .adata,      match_type: exact,  packer: ASPack}
+  # Petite
+  - {name: .petite,     match_type: exact,  packer: Petite}
+  # PECompact
+  - {name: PECompact2,  match_type: exact,  packer: PECompact}
+  # NsPack
+  - {name: .nsp0,       match_type: exact,  packer: NsPack}
+  - {name: .nsp1,       match_type: exact,  packer: NsPack}
+  - {name: .nsp2,       match_type: exact,  packer: NsPack}
+  # FSG
+  - {name: .FSG,        match_type: exact,  packer: FSG}
+  # ExeStealth
+  - {name: "!EP",       match_type: exact,  packer: ExeStealth}
+  # Generic
+  - {name: .packed,     match_type: exact,  packer: generic_packer}
+  # VMProtect
+  - {name: .vmp,        match_type: prefix, packer: VMProtect}
+  # Themida / WinLicense
+  - {name: .themida,    match_type: exact,  packer: Themida}
+  - {name: .winlicens,  match_type: exact,  packer: WinLicense}
+  # Enigma
+  - {name: .enigma1,    match_type: exact,  packer: Enigma}
+  - {name: .enigma2,    match_type: exact,  packer: Enigma}
+  # Obsidium
+  - {name: .obsidiu,    match_type: exact,  packer: Obsidium}
+  # PESpin
+  - {name: .taz,        match_type: exact,  packer: PESpin}
+  # Upack
+  - {name: .Upack,      match_type: exact,  packer: Upack}
+
+# First entry-point bytes as numeric markers
+ep_byte_markers:
+  - {byte: 0x60,  description: PUSHAD,     packer: generic_packer}   # UPX, ASPack, PECompact, etc.
+  - {byte: 0xE9,  description: JMP_NEAR,   packer: generic_protector}
+  - {byte: 0xEB,  description: JMP_SHORT,  packer: generic_stub}
+
+# String markers for packers, searched in extracted strings
+string_markers:
+  - {pattern: "UPX!",            match_type: exact,  packer: UPX}
+  - {pattern: "$Info:",          match_type: exact,  packer: UPX}
+  - {pattern: "MPRESS",         match_type: exact,  packer: MPRESS}
+  - {pattern: "ASPack",         match_type: exact,  packer: ASPack}
+  - {pattern: "PECompact",      match_type: exact,  packer: PECompact}
+  - {pattern: "FSG 1\\.\\d+",   match_type: regex,  packer: FSG}
+  - {pattern: "Petite",         match_type: exact,  packer: Petite}
