@@ -1,6 +1,6 @@
 # Core runtime and training dependencies for the published MalStat snapshot.
 # Tested with Python 3.13.13 on 2026-05-31.
-capstone==5.0.7
+capstone==5.0.9
 Jinja2==3.1.6
 joblib==1.5.3
 lief==0.17.6
